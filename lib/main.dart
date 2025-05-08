@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_vertexai/firebase_vertexai.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +23,11 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   final InMemoryChatController chatController = InMemoryChatController();
 
+  final ChatSession chatSession =
+      FirebaseVertexAI.instance
+          .generativeModel(model: 'gemini-2.0-flash')
+          .startChat();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -39,6 +46,8 @@ class _MainAppState extends State<MainApp> {
                 text: text,
               ),
             );
+
+            _sendToGemini(text);
           },
           onAttachmentTap: () {
             // add attachment to chat message
@@ -46,5 +55,26 @@ class _MainAppState extends State<MainApp> {
         ),
       ),
     );
+  }
+
+  Future<void> _sendToGemini(String text) async {
+    final String id = '${chatController.messages.length}';
+    String response = '';
+    Message oldMessage = Message.text(
+      id: id,
+      authorId: 'model',
+      text: response,
+    );
+    chatController.insertMessage(oldMessage);
+    chatSession.sendMessageStream(Content.text(text)).listen((event) {
+      response = '$response ${event.text ?? ''}';
+      final newMessage = Message.text(
+        id: id,
+        authorId: 'model',
+        text: response,
+      );
+      chatController.updateMessage(oldMessage, newMessage);
+      oldMessage = newMessage;
+    });
   }
 }
