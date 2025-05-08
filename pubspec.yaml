@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   firebase_core: ^3.13.0
   firebase_vertexai: ^1.6.0
+  flutter_chat_ui: ^2.1.1
+  flutter_chat_types: ^3.6.2
+  flutter_chat_core: ^2.1.1
 
 dev_dependencies:
   flutter_test:
