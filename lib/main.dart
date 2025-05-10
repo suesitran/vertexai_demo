@@ -9,6 +9,7 @@ import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:vertexai_demo/firebase_options.dart';
+import 'package:vertexai_demo/functions.dart';
 
 void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -25,10 +26,14 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   final InMemoryChatController chatController = InMemoryChatController();
+  final FunctionsHandler functionsHandler = FunctionsHandler();
 
-  final ChatSession chatSession =
+  late final ChatSession chatSession =
       FirebaseVertexAI.instance
-          .generativeModel(model: 'gemini-2.0-flash')
+          .generativeModel(
+            model: 'gemini-2.0-flash',
+            tools: [functionsHandler.functions],
+          )
           .startChat();
 
   final ValueNotifier<XFile?> attachment = ValueNotifier(null);
@@ -93,7 +98,12 @@ class _MainAppState extends State<MainApp> {
     );
   }
 
-  Future<void> _sendToGemini(String text) async {
+  Future<void> _sendToGemini(
+    String text, {
+    List<FunctionResponse>? functionResponses,
+    Message? oldMessage,
+    String response = '',
+  }) async {
     if (text.isEmpty && attachment.value == null) {
       // nothing to send
       return;
@@ -109,44 +119,47 @@ class _MainAppState extends State<MainApp> {
       );
     }
 
-    final String id = '${chatController.messages.length}';
-    String response = '';
-    Message oldMessage = Message.text(
-      id: id,
+    oldMessage ??= Message.text(
+      id: '${chatController.messages.length}',
       authorId: 'model',
       text: response,
     );
-    chatController.insertMessage(oldMessage);
+    // only create empty message if functionResponse is null
+    if (functionResponses == null || functionResponses.isEmpty) {
+      chatController.insertMessage(oldMessage);
+    }
 
-    final Content content = Content('user', [
+    final Content content = Content.multi([
       if (text.isNotEmpty) TextPart(text),
       if (attachment.value != null)
         InlineDataPart('image/*', await attachment.value!.readAsBytes()),
+      if (functionResponses != null && functionResponses.isNotEmpty)
+        ...functionResponses,
     ]);
 
-    chatSession
-        .sendMessageStream(content)
-        .listen(
-          (event) {
-            response = '$response ${event.text ?? ''}';
-            final newMessage = Message.text(
-              id: id,
-              authorId: 'model',
-              text: response,
-            );
-            chatController.updateMessage(oldMessage, newMessage);
-            oldMessage = newMessage;
-          },
-          onDone: () {
-            final newMessage = Message.text(
-              id: oldMessage.id,
-              authorId: oldMessage.authorId,
-              text: response,
-              sentAt: DateTime.now(),
-            );
-            chatController.updateMessage(oldMessage, newMessage);
-          },
+    chatSession.sendMessageStream(content).listen((event) {
+      if (event.functionCalls.isNotEmpty) {
+        List<FunctionResponse> functionResponses = functionsHandler
+            .handleFunctionCalls(event.functionCalls);
+
+        _sendToGemini(
+          text,
+          functionResponses: functionResponses,
+          oldMessage: oldMessage,
+          response: response,
         );
+        return;
+      }
+
+      response = '$response ${event.text ?? ''}';
+      final newMessage = Message.text(
+        id: oldMessage!.id,
+        authorId: oldMessage!.authorId,
+        text: response,
+      );
+      chatController.updateMessage(oldMessage!, newMessage);
+      oldMessage = newMessage;
+    });
 
     // clear attachment
     attachment.value = null;
