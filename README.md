@@ -34,4 +34,20 @@ You'll also need to enable Vertex AI in your Firebase (and underlying GCP) proje
 
 Once that's done, you can start running the app to send prompts and receive generative responses!
 
+---
+
+## 👀 What’s Inside?
+
+🔌 Integration with Firebase Functions for secure API calls
+
+📡 Communication with Vertex AI (chat/text completion)
+
+🧪 A simple UI for entering prompts and viewing responses
+
+🐣 Minimal and beginner-friendly codebase
+
+## 🧃 Disclaimer
+
+This is a demo project. It’s tiny. It’s cute. It won’t pay your bills (unless your boss really loves proof-of-concepts). Don’t use it in production without proper security, rate limiting, error handling and code coverage.
+
 
