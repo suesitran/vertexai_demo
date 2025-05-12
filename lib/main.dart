@@ -70,24 +70,31 @@ class _MainAppState extends State<MainApp> {
           },
           builders: Builders(
             imageMessageBuilder: (context, image, index) {
-              return kIsWeb
-                  // Image does not support File on Web platform,
-                  // therefore we use Image.network for web platform
-                  ? Image.network(image.source, width: 300)
-                  : Image.file(File(image.source), width: 300);
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child:
+                    kIsWeb
+                        // Image does not support File on Web platform,
+                        // therefore we use Image.network for web platform
+                        ? Image.network(image.source, width: 300)
+                        : Image.file(File(image.source), width: 300),
+              );
             },
             composerBuilder: (p0) {
               return Composer(
                 attachmentIcon: ValueListenableBuilder<XFile?>(
                   valueListenable: attachment,
                   builder: (context, value, child) {
-                    if (value == null) return const Icon(Icons.attachment);
+                    final size = 30.0;
+                    if (value == null) {
+                      return Icon(Icons.attachment, size: size);
+                    }
 
                     return kIsWeb
                         // Image does not support File on Web platform,
                         // therefore we use Image.network for web platform
-                        ? Image.network(value.path, height: 100)
-                        : Image.file(File(value.path), height: 100);
+                        ? Image.network(value.path, height: size)
+                        : Image.file(File(value.path), height: size);
                   },
                 ),
               );
@@ -151,11 +158,12 @@ class _MainAppState extends State<MainApp> {
         return;
       }
 
-      response = '$response ${event.text ?? ''}';
+      response = '$response ${event.text ?? ''}'.trim();
       final newMessage = Message.text(
         id: oldMessage!.id,
         authorId: oldMessage!.authorId,
         text: response,
+        sentAt: DateTime.now(),
       );
       chatController.updateMessage(oldMessage!, newMessage);
       oldMessage = newMessage;
