@@ -10,11 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
   firebase_core: ^3.13.0
-  firebase_vertexai: ^1.6.0
   flutter_chat_ui: ^2.1.1
   flutter_chat_types: ^3.6.2
   flutter_chat_core: ^2.1.1
   image_picker: ^1.1.2
+  firebase_ai: ^2.0.0
 
 dev_dependencies:
   flutter_test:

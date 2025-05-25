@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_vertexai/firebase_vertexai.dart';
+import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
@@ -29,7 +29,7 @@ class _MainAppState extends State<MainApp> {
   final FunctionsHandler functionsHandler = FunctionsHandler();
 
   late final ChatSession chatSession =
-      FirebaseVertexAI.instance
+      FirebaseAI.vertexAI()
           .generativeModel(
             model: 'gemini-2.0-flash',
             tools: [functionsHandler.functions],

@@ -1,4 +1,4 @@
-import 'package:firebase_vertexai/firebase_vertexai.dart';
+import 'package:firebase_ai/firebase_ai.dart';
 
 class FunctionsHandler {
   Tool get functions => Tool.functionDeclarations([_getMyName, _getDateTime]);
