@@ -34,7 +34,9 @@ class _MainAppState extends State<MainApp> {
           .generativeModel(
             model: 'gemini-2.0-flash',
             tools: [functionsHandler.functions],
-        systemInstruction: Content.system('You are Ducky, a smart chatbot that can help user with anything he needs.')
+            systemInstruction: Content.system(
+              'You are Ducky, a smart chatbot that can help user with anything he needs.',
+            ),
           )
           .startChat();
 
@@ -151,21 +153,21 @@ class _MainAppState extends State<MainApp> {
         List<FunctionResponse> functionResponses = await functionsHandler
             .handleFunctionCalls(event.functionCalls, (value) {
               // on file created
-          final newMessage = Message.image(
-            id: oldMessage!.id,
-            authorId: oldMessage!.authorId,
-            text: response,
-            sentAt: DateTime.now(),
-            source: value
-          );
-          chatController.updateMessage(oldMessage!, newMessage);
+              final newMessage = Message.image(
+                id: oldMessage!.id,
+                authorId: oldMessage!.authorId,
+                text: response,
+                sentAt: DateTime.now(),
+                source: value,
+              );
+              chatController.updateMessage(oldMessage!, newMessage);
 
-          oldMessage ??= Message.text(
-            id: '${chatController.messages.length}',
-            authorId: 'model',
-            text: '',
-          );
-        },);
+              oldMessage ??= Message.text(
+                id: '${chatController.messages.length}',
+                authorId: 'model',
+                text: '',
+              );
+            });
 
         _sendToGemini(
           text,
