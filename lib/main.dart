@@ -34,6 +34,7 @@ class _MainAppState extends State<MainApp> {
           .generativeModel(
             model: 'gemini-2.0-flash',
             tools: [functionsHandler.functions],
+        systemInstruction: Content.system('You are Ducky, a smart chatbot that can help user with anything he needs.')
           )
           .startChat();
 
@@ -145,9 +146,9 @@ class _MainAppState extends State<MainApp> {
         ...functionResponses,
     ]);
 
-    chatSession.sendMessageStream(content).listen((event) {
+    chatSession.sendMessageStream(content).listen((event) async {
       if (event.functionCalls.isNotEmpty) {
-        List<FunctionResponse> functionResponses = functionsHandler
+        List<FunctionResponse> functionResponses = await functionsHandler
             .handleFunctionCalls(event.functionCalls);
 
         _sendToGemini(

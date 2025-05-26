@@ -1,7 +1,7 @@
 import 'package:firebase_ai/firebase_ai.dart';
 
 class FunctionsHandler {
-  Tool get functions => Tool.functionDeclarations([_getMyName, _getDateTime]);
+  Tool get functions => Tool.functionDeclarations([_getMyName, _getDateTime, _generateImage]);
 
   final FunctionDeclaration _getMyName = FunctionDeclaration(
     '_getMyName',
@@ -15,7 +15,15 @@ class FunctionsHandler {
     parameters: {},
   );
 
-  List<FunctionResponse> handleFunctionCalls(Iterable<FunctionCall> calls) {
+  final FunctionDeclaration _generateImage = FunctionDeclaration(
+    '_generateImage',
+    'when user request to generate image, call this function and pass in user\'s prompt to create an image',
+    parameters: {
+      'prompt': Schema.string(description: 'user\'s prompt to create image'),
+    },
+  );
+
+  Future<List<FunctionResponse>> handleFunctionCalls(Iterable<FunctionCall> calls) async {
     final List<FunctionResponse> responses = [];
     for (FunctionCall call in calls) {
       if (call.name == _getMyName.name) {
@@ -26,6 +34,13 @@ class FunctionsHandler {
         responses.add(
           FunctionResponse(call.name, {'dateTime': DateTime.now().toString()}),
         );
+      }
+
+      if (call.name == _generateImage.name) {
+        // invoke
+        responses.add(FunctionResponse(call.name, {
+          'image':'base64stringimage'
+        }));
       }
     }
     return responses;
