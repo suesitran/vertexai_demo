@@ -12,6 +12,7 @@ import 'package:vertexai_demo/firebase_options.dart';
 import 'package:vertexai_demo/functions.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MainApp());
