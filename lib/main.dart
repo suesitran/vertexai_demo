@@ -149,7 +149,23 @@ class _MainAppState extends State<MainApp> {
     chatSession.sendMessageStream(content).listen((event) async {
       if (event.functionCalls.isNotEmpty) {
         List<FunctionResponse> functionResponses = await functionsHandler
-            .handleFunctionCalls(event.functionCalls);
+            .handleFunctionCalls(event.functionCalls, (value) {
+              // on file created
+          final newMessage = Message.image(
+            id: oldMessage!.id,
+            authorId: oldMessage!.authorId,
+            text: response,
+            sentAt: DateTime.now(),
+            source: value
+          );
+          chatController.updateMessage(oldMessage!, newMessage);
+
+          oldMessage ??= Message.text(
+            id: '${chatController.messages.length}',
+            authorId: 'model',
+            text: '',
+          );
+        },);
 
         _sendToGemini(
           text,
