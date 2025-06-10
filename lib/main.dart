@@ -2,14 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:vertexai_demo/firebase_options.dart';
-import 'package:vertexai_demo/functions.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,18 +25,6 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   final InMemoryChatController chatController = InMemoryChatController();
-  final FunctionsHandler functionsHandler = FunctionsHandler();
-
-  late final ChatSession chatSession =
-      FirebaseAI.vertexAI()
-          .generativeModel(
-            model: 'gemini-2.0-flash',
-            tools: [functionsHandler.functions],
-            systemInstruction: Content.system(
-              'You are Ducky, a smart chatbot that can help user with anything he needs.',
-            ),
-          )
-          .startChat();
 
   final ValueNotifier<XFile?> attachment = ValueNotifier(null);
 
@@ -62,7 +48,7 @@ class _MainAppState extends State<MainApp> {
               ),
             );
 
-            _sendToGemini(text);
+            // _sendToGemini(text); // Removed AI call
           },
           onAttachmentTap: () {
             // add attachment to chat message
@@ -107,89 +93,5 @@ class _MainAppState extends State<MainApp> {
         ),
       ),
     );
-  }
-
-  Future<void> _sendToGemini(
-    String text, {
-    List<FunctionResponse>? functionResponses,
-    Message? oldMessage,
-    String response = '',
-  }) async {
-    if (text.isEmpty && attachment.value == null) {
-      // nothing to send
-      return;
-    }
-
-    if (attachment.value != null) {
-      chatController.insertMessage(
-        Message.image(
-          id: '${chatController.messages.length}',
-          authorId: 'user',
-          source: attachment.value!.path,
-        ),
-      );
-    }
-
-    oldMessage ??= Message.text(
-      id: '${chatController.messages.length}',
-      authorId: 'model',
-      text: response,
-    );
-    // only create empty message if functionResponse is null
-    if (functionResponses == null || functionResponses.isEmpty) {
-      chatController.insertMessage(oldMessage);
-    }
-
-    final Content content = Content.multi([
-      if (text.isNotEmpty) TextPart(text),
-      if (attachment.value != null)
-        InlineDataPart('image/*', await attachment.value!.readAsBytes()),
-      if (functionResponses != null && functionResponses.isNotEmpty)
-        ...functionResponses,
-    ]);
-
-    chatSession.sendMessageStream(content).listen((event) async {
-      if (event.functionCalls.isNotEmpty) {
-        List<FunctionResponse> functionResponses = await functionsHandler
-            .handleFunctionCalls(event.functionCalls, (value) {
-              // on file created
-              final newMessage = Message.image(
-                id: oldMessage!.id,
-                authorId: oldMessage!.authorId,
-                text: response,
-                sentAt: DateTime.now(),
-                source: value,
-              );
-              chatController.updateMessage(oldMessage!, newMessage);
-
-              oldMessage ??= Message.text(
-                id: '${chatController.messages.length}',
-                authorId: 'model',
-                text: '',
-              );
-            });
-
-        _sendToGemini(
-          text,
-          functionResponses: functionResponses,
-          oldMessage: oldMessage,
-          response: response,
-        );
-        return;
-      }
-
-      response = '$response ${event.text ?? ''}'.trim();
-      final newMessage = Message.text(
-        id: oldMessage!.id,
-        authorId: oldMessage!.authorId,
-        text: response,
-        sentAt: DateTime.now(),
-      );
-      chatController.updateMessage(oldMessage!, newMessage);
-      oldMessage = newMessage;
-    });
-
-    // clear attachment
-    attachment.value = null;
   }
 }
