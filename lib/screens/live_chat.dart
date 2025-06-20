@@ -23,8 +23,25 @@ class _LiveChatState extends State<LiveChat> {
   void initState() {
     super.initState();
 
+    _isSessionConnected.addListener(_startCommunication);
+    _isAudioReady.addListener(_startCommunication);
+
     _initSession();
     _initAudio();
+  }
+
+  void _startCommunication() async {
+    final bool sessionReady = _isSessionConnected.value;
+    final bool audioReady = _isAudioReady.value;
+
+    if (sessionReady && audioReady) {
+      // both ready, start sending audio stream
+      final audioStream = await _audioInput.startRecording();
+
+        _session.sendMediaStream(
+          audioStream.map((bytes) => InlineDataPart('audio/pcm', bytes)),
+        );
+    }
   }
 
   Future<void> _initSession() async {
@@ -43,11 +60,26 @@ class _LiveChatState extends State<LiveChat> {
 
   Future<void> _initAudio() async {
     _isAudioReady.value = await _audioInput.init();
-    ;
   }
 
   void _handleSessionResponse(LiveServerResponse response) {
     _isSessionConnected.value = true;
+
+    final LiveServerMessage message = response.message;
+
+    if (message is LiveServerContent) {
+      final Content? content = message.modelTurn;
+
+      if (content != null) {
+        for (Part part in content.parts) {
+          if (part is TextPart) {
+            // handle text part
+          } else if (part is InlineDataPart) {
+            // handle inline data
+          }
+        }
+      }
+    }
   }
 
   @override

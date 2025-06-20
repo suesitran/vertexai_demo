@@ -18,7 +18,7 @@ final class AudioInput {
     return permission;
   }
 
-  Future<void> startRecording() async {
+  Future<Stream<Uint8List>> startRecording() async {
     var recordConfig = RecordConfig(
       encoder: _encoder,
       sampleRate: 24000,
@@ -31,8 +31,12 @@ final class AudioInput {
       iosConfig: const IosRecordConfig(categoryOptions: []),
     );
     await _recorder.listInputDevices();
-    audioStream = await _recorder.startStream(recordConfig);
+    final stream = await _recorder.startStream(recordConfig);
     _isRecording = true;
+
+    audioStream = stream;
+
+    return stream;
   }
 
   Future<void> stopRecording() async {
