@@ -2,8 +2,26 @@ import 'dart:io';
 
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:path_provider/path_provider.dart';
+
+enum FileType {
+  picture,
+  video,
+  audio;
+
+  String get extension => switch (this) {
+    FileType.picture => 'png',
+    FileType.video => 'mp4',
+    FileType.audio => 'm4a',
+  };
+}
+
+class FileGenerated {
+  final String path;
+  final FileType type;
+
+  FileGenerated({required this.path, required this.type});
+}
 
 class FunctionsHandler {
   Tool get functions =>
@@ -31,7 +49,7 @@ class FunctionsHandler {
 
   Future<List<FunctionResponse>> handleFunctionCalls(
     Iterable<FunctionCall> calls,
-    ValueChanged<String> onFileCreated,
+    ValueChanged<FileGenerated> onFileCreated,
   ) async {
     final List<FunctionResponse> responses = [];
     for (FunctionCall call in calls) {
@@ -49,21 +67,38 @@ class FunctionsHandler {
         // invoke
         final ImagenModel imagenModel = FirebaseAI.vertexAI().imagenModel(
           model: 'imagen-3.0-generate-002',
+          generationConfig: ImagenGenerationConfig(
+            imageFormat: ImagenFormat.png(),
+            aspectRatio: ImagenAspectRatio.square1x1,
+            numberOfImages: 1,
+          ),
         );
         final String prompt = call.args['prompt'] as String;
 
-        final ImagenInlineImage image =
-            (await imagenModel.generateImages(prompt)).images.first;
-        final Directory appCache = await getApplicationCacheDirectory();
-        final File file = File(
-          '${appCache.path}${Platform.pathSeparator}${DateTime.now().millisecondsSinceEpoch}.png',
-        );
-        await file.writeAsBytes(image.bytesBase64Encoded);
+        final List<ImagenInlineImage> images =
+            (await imagenModel.generateImages(prompt)).images;
 
-        onFileCreated(file.path);
-        responses.add(FunctionResponse(call.name, {'imagePath': file.path}));
+        if (images.isNotEmpty) {
+          final image = images.first;
+          final File file = await createEmptyFile(FileType.picture);
+          await file.writeAsBytes(image.bytesBase64Encoded);
+
+          onFileCreated(FileGenerated(path: file.path, type: FileType.picture));
+          responses.add(FunctionResponse(call.name, {'imagePath': file.path}));
+        } else {
+          responses.add(
+            FunctionResponse(call.name, {'result': 'failed to generate image'}),
+          );
+        }
       }
     }
     return responses;
+  }
+
+  Future<File> createEmptyFile(FileType type) async {
+    final Directory appCache = await getApplicationCacheDirectory();
+    return File(
+      '${appCache.path}${Platform.pathSeparator}${DateTime.now().millisecondsSinceEpoch}.${type.extension}',
+    );
   }
 }
