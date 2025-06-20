@@ -21,15 +21,15 @@ class _GenerativeChatState extends State<GenerativeChat> {
   final FunctionsHandler functionsHandler = FunctionsHandler();
 
   late final ChatSession chatSession =
-  FirebaseAI.vertexAI()
-      .generativeModel(
-    model: 'gemini-2.0-flash',
-    tools: [functionsHandler.functions],
-    systemInstruction: Content.system(
-      'You are Ducky, a smart chatbot that can help user with anything he needs.',
-    ),
-  )
-      .startChat();
+      FirebaseAI.vertexAI()
+          .generativeModel(
+            model: 'gemini-2.0-flash',
+            tools: [functionsHandler.functions],
+            systemInstruction: Content.system(
+              'You are Ducky, a smart chatbot that can help user with anything he needs.',
+            ),
+          )
+          .startChat();
 
   final ValueNotifier<XFile?> attachment = ValueNotifier(null);
 
@@ -65,11 +65,11 @@ class _GenerativeChatState extends State<GenerativeChat> {
           return ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child:
-            kIsWeb
-            // Image does not support File on Web platform,
-            // therefore we use Image.network for web platform
-                ? Image.network(image.source, width: 300)
-                : Image.file(File(image.source), width: 300),
+                kIsWeb
+                    // Image does not support File on Web platform,
+                    // therefore we use Image.network for web platform
+                    ? Image.network(image.source, width: 300)
+                    : Image.file(File(image.source), width: 300),
           );
         },
         composerBuilder: (p0) {
@@ -83,8 +83,8 @@ class _GenerativeChatState extends State<GenerativeChat> {
                 }
 
                 return kIsWeb
-                // Image does not support File on Web platform,
-                // therefore we use Image.network for web platform
+                    // Image does not support File on Web platform,
+                    // therefore we use Image.network for web platform
                     ? Image.network(value.path, height: size)
                     : Image.file(File(value.path), height: size);
               },
@@ -96,11 +96,11 @@ class _GenerativeChatState extends State<GenerativeChat> {
   }
 
   Future<void> _sendToGemini(
-      String text, {
-        List<FunctionResponse>? functionResponses,
-        Message? oldMessage,
-        String response = '',
-      }) async {
+    String text, {
+    List<FunctionResponse>? functionResponses,
+    Message? oldMessage,
+    String response = '',
+  }) async {
     if (text.isEmpty && attachment.value == null) {
       // nothing to send
       return;
@@ -138,25 +138,25 @@ class _GenerativeChatState extends State<GenerativeChat> {
       if (event.functionCalls.isNotEmpty) {
         List<FunctionResponse> functionResponses = await functionsHandler
             .handleFunctionCalls(event.functionCalls, (value) {
-          // on file created
-          if (value.type == FileType.picture) {
-            final newMessage = Message.image(
-              id: oldMessage!.id,
-              authorId: oldMessage!.authorId,
-              text: response,
-              sentAt: DateTime.now(),
-              source: value.path,
-            );
-            chatController.updateMessage(oldMessage!, newMessage);
+              // on file created
+              if (value.type == FileType.picture) {
+                final newMessage = Message.image(
+                  id: oldMessage!.id,
+                  authorId: oldMessage!.authorId,
+                  text: response,
+                  sentAt: DateTime.now(),
+                  source: value.path,
+                );
+                chatController.updateMessage(oldMessage!, newMessage);
 
-            oldMessage = Message.text(
-              id: '${chatController.messages.length}',
-              authorId: 'model',
-              text: '',
-            );
-            chatController.insertMessage(oldMessage!);
-          }
-        });
+                oldMessage = Message.text(
+                  id: '${chatController.messages.length}',
+                  authorId: 'model',
+                  text: '',
+                );
+                chatController.insertMessage(oldMessage!);
+              }
+            });
 
         _sendToGemini(
           text,

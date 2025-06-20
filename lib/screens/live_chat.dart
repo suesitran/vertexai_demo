@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/material.dart';
 import 'package:vertexai_demo/utils/audio_input.dart';
+import 'package:vertexai_demo/utils/audio_output.dart';
 
 class LiveChat extends StatefulWidget {
   const LiveChat({super.key});
@@ -18,6 +19,7 @@ class _LiveChatState extends State<LiveChat> {
   final ValueNotifier<bool> _isAudioReady = ValueNotifier(false);
 
   final AudioInput _audioInput = AudioInput();
+  final AudioOutput _audioOutput = AudioOutput();
 
   @override
   void initState() {
@@ -38,9 +40,9 @@ class _LiveChatState extends State<LiveChat> {
       // both ready, start sending audio stream
       final audioStream = await _audioInput.startRecording();
 
-        _session.sendMediaStream(
-          audioStream.map((bytes) => InlineDataPart('audio/pcm', bytes)),
-        );
+      _session.sendMediaStream(
+        audioStream.map((bytes) => InlineDataPart('audio/pcm', bytes)),
+      );
     }
   }
 
@@ -59,7 +61,10 @@ class _LiveChatState extends State<LiveChat> {
   }
 
   Future<void> _initAudio() async {
+    await _audioOutput.init();
     _isAudioReady.value = await _audioInput.init();
+
+    await _audioOutput.playStream();
   }
 
   void _handleSessionResponse(LiveServerResponse response) {
@@ -76,6 +81,7 @@ class _LiveChatState extends State<LiveChat> {
             // handle text part
           } else if (part is InlineDataPart) {
             // handle inline data
+            _audioOutput.addAudioDataStream(part.bytes);
           }
         }
       }

@@ -70,7 +70,7 @@ class FunctionsHandler {
           generationConfig: ImagenGenerationConfig(
             imageFormat: ImagenFormat.png(),
             aspectRatio: ImagenAspectRatio.square1x1,
-            numberOfImages: 1
+            numberOfImages: 1,
           ),
         );
         final String prompt = call.args['prompt'] as String;
@@ -86,9 +86,9 @@ class FunctionsHandler {
           onFileCreated(FileGenerated(path: file.path, type: FileType.picture));
           responses.add(FunctionResponse(call.name, {'imagePath': file.path}));
         } else {
-          responses.add(FunctionResponse(call.name, {
-            'result': 'failed to generate image'
-          }));
+          responses.add(
+            FunctionResponse(call.name, {'result': 'failed to generate image'}),
+          );
         }
       }
     }
