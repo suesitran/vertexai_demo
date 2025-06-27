@@ -43,7 +43,7 @@ class FunctionsHandler {
     '_generateImage',
     'when user request to generate image, call this function and pass in user\'s prompt to create an image',
     parameters: {
-      'prompt': Schema.string(description: 'user\'s prompt to create image'),
+      'prompt': Schema.string(description: 'user\'s prompt to create image. Translate all prompt to English'),
     },
   );
 
