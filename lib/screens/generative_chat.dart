@@ -20,6 +20,11 @@ class _GenerativeChatState extends State<GenerativeChat> {
   final InMemoryChatController chatController = InMemoryChatController();
   final FunctionsHandler functionsHandler = FunctionsHandler();
 
+  final String userId = 'user';
+  final double paddingLarge = 50.0;
+  final double paddingSmall = 10.0;
+  final double radius = 10;
+
   late final ChatSession chatSession =
       FirebaseAI.vertexAI()
           .generativeModel(
@@ -36,7 +41,7 @@ class _GenerativeChatState extends State<GenerativeChat> {
   @override
   Widget build(BuildContext context) {
     return Chat(
-      currentUserId: 'user',
+      currentUserId: userId,
       resolveUser: (id) => Future.value(User(id: id, name: 'User')),
       chatController: chatController,
       onMessageSend: (text) {
@@ -44,7 +49,7 @@ class _GenerativeChatState extends State<GenerativeChat> {
         chatController.insertMessage(
           Message.text(
             id: '${chatController.messages.length}',
-            authorId: 'user',
+            authorId: userId,
             text: text,
             sentAt: DateTime.now(),
           ),
@@ -72,7 +77,7 @@ class _GenerativeChatState extends State<GenerativeChat> {
                     : Image.file(File(image.source), width: 300),
           );
         },
-        composerBuilder: (p0) {
+        composerBuilder: (context) {
           return Composer(
             attachmentIcon: ValueListenableBuilder<XFile?>(
               valueListenable: attachment,
@@ -88,6 +93,35 @@ class _GenerativeChatState extends State<GenerativeChat> {
                     ? Image.network(value.path, height: size)
                     : Image.file(File(value.path), height: size);
               },
+            ),
+          );
+        },
+        textMessageBuilder: (context, textMessage, index) {
+          final bool isMine = textMessage.authorId == userId;
+
+          return Container(
+            margin: EdgeInsets.only(
+              left: isMine ? paddingLarge : paddingSmall,
+              right: isMine ? paddingSmall : paddingLarge,
+              top: paddingSmall,
+              bottom: paddingSmall,
+            ),
+            padding: EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(isMine ? radius : 0.0),
+                topRight: Radius.circular(isMine ? 0.0 : radius),
+                bottomRight: Radius.circular(radius),
+                bottomLeft: Radius.circular(radius),
+              ),
+              color:
+                  isMine
+                      ? Colors.indigo.withAlpha(200)
+                      : Colors.grey.withAlpha(80),
+            ),
+            child: Text(
+              textMessage.text,
+              style: TextStyle(color: isMine ? Colors.white : Colors.black),
             ),
           );
         },

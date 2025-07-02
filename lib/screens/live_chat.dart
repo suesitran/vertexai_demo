@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:vertexai_demo/gen/assets.gen.dart';
 import 'package:vertexai_demo/utils/audio_input.dart';
 import 'package:vertexai_demo/utils/audio_output.dart';
 
@@ -91,6 +93,7 @@ class _LiveChatState extends State<LiveChat> {
   @override
   void dispose() async {
     await _session.close();
+    await _audioInput.stopRecording();
     _responseSubscription?.cancel();
     _responseSubscription = null;
     _isSessionConnected.dispose();
@@ -105,8 +108,12 @@ class _LiveChatState extends State<LiveChat> {
       builder: (context, connected, child) {
         if (connected) {
           // show a UI indicate that session is connected
-          return Center(
+          return Container(
+            padding: EdgeInsets.all(20.0),
+            alignment: Alignment.center,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text('Session connected'),
                 ValueListenableBuilder(
@@ -114,6 +121,14 @@ class _LiveChatState extends State<LiveChat> {
                   builder:
                       (context, value, child) =>
                           Text('Audio ${value ? 'ready' : 'not ready'}'),
+                ),
+                Text(
+                  'Source code available at \nhttps://github.com/suesitran/vertexai_demo',
+                  textAlign: TextAlign.center,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20.0),
+                  child: Assets.vertexAiDemo.image(),
                 ),
               ],
             ),

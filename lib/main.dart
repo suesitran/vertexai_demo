@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:vertexai_demo/firebase_options.dart';
 import 'package:vertexai_demo/screens/generative_chat.dart';
 import 'package:vertexai_demo/screens/live_chat.dart';
+import 'package:vertexai_demo/screens/qr_code.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,12 +14,20 @@ void main() async {
 
 enum Screens {
   generative,
-  live;
+  live,
+  qrCode;
 
   Widget get widget => switch (this) {
     Screens.generative => GenerativeChat(),
     Screens.live => LiveChat(),
+    Screens.qrCode => QrCode(),
   };
+
+  String get title => switch (this) {
+    Screens.generative => "Generative model demo",
+  Screens.live => "Live multimodel demo",
+  Screens.qrCode => 'Source code'
+};
 }
 
 class MainApp extends StatefulWidget {
@@ -63,7 +72,7 @@ class _MainAppState extends State<MainApp> {
                                       );
                                       Navigator.of(context).pop();
                                     },
-                                    child: Text(Screens.values[index].name),
+                                    child: Text(Screens.values[index].title),
                                   ),
                                 ),
                           ),
