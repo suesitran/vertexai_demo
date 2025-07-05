@@ -130,6 +130,26 @@ class _LiveChatState extends State<LiveChat> {
                   padding: const EdgeInsets.symmetric(vertical: 20.0),
                   child: Assets.vertexAiDemo.image(),
                 ),
+                TextButton(
+                  onPressed: () {
+                    _audioInput.isPaused.then((pause) {
+                      if (pause) {
+                        _audioInput.resume();
+                      } else {
+                        _audioInput.pause();
+                      }
+                    });
+                  },
+                  child: ValueListenableBuilder<RecordingState>(
+                    valueListenable: _audioInput.state,
+                    builder: (context, state, child) {
+                      final bool recording = state == RecordingState.recording;
+                      String label = recording ? 'Pause audio' : 'Resume audio';
+
+                      return Text(label);
+                    },
+                  ),
+                ),
               ],
             ),
           );
