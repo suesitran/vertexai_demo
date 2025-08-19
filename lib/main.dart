@@ -25,9 +25,9 @@ enum Screens {
 
   String get title => switch (this) {
     Screens.generative => "Generative model demo",
-  Screens.live => "Live multimodel demo",
-  Screens.qrCode => 'Source code'
-};
+    Screens.live => "Live multimodel demo",
+    Screens.qrCode => 'Source code',
+  };
 }
 
 class MainApp extends StatefulWidget {

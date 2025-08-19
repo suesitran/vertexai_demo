@@ -2,19 +2,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 
-enum RecordingState {
-  uninitialised,
-  initialised,
-  recording,
-  paused,
-  stopped,
-}
+enum RecordingState { uninitialised, initialised, recording, paused, stopped }
+
 final class AudioInput {
   final _recorder = AudioRecorder();
   final AudioEncoder _encoder = AudioEncoder.pcm16bits;
 
   Stream<Uint8List>? audioStream;
-  final ValueNotifier<RecordingState> state = ValueNotifier(RecordingState.uninitialised);
+  final ValueNotifier<RecordingState> state = ValueNotifier(
+    RecordingState.uninitialised,
+  );
 
   Future<bool> init() async {
     // check permission
