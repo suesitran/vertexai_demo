@@ -9,15 +9,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^3.13.0
+  firebase_core: ^4.2.0
   flutter_chat_ui: ^2.1.1
   flutter_chat_types: ^3.6.2
   flutter_chat_core: ^2.1.1
   image_picker: ^1.1.2
-  firebase_ai: ^2.0.0
+  firebase_ai: ^3.4.0
   path_provider: ^2.1.5
   record: ^6.0.0
-  flutter_soloud: ^3.1.11
+  flutter_soloud: ^3.3.9
 
 dev_dependencies:
   flutter_test:
