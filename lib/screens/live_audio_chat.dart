@@ -7,14 +7,14 @@ import 'package:vertexai_demo/gen/assets.gen.dart';
 import 'package:vertexai_demo/utils/audio_input.dart';
 import 'package:vertexai_demo/utils/audio_output.dart';
 
-class LiveChat extends StatefulWidget {
-  const LiveChat({super.key});
+class LiveAudioChat extends StatefulWidget {
+  const LiveAudioChat({super.key});
 
   @override
-  State<LiveChat> createState() => _LiveChatState();
+  State<LiveAudioChat> createState() => _LiveAudioChatState();
 }
 
-class _LiveChatState extends State<LiveChat> {
+class _LiveAudioChatState extends State<LiveAudioChat> {
   late final LiveSession _session;
   StreamSubscription<LiveServerResponse>? _responseSubscription;
   final ValueNotifier<bool> _isSessionConnected = ValueNotifier(false);
@@ -52,7 +52,7 @@ class _LiveChatState extends State<LiveChat> {
     _session =
         await FirebaseAI.vertexAI()
             .liveGenerativeModel(
-              model: 'gemini-2.0-flash-exp',
+              model: 'gemini-2.5-flash',
               liveGenerationConfig: LiveGenerationConfig(
                 responseModalities: [ResponseModalities.audio],
               ),
@@ -91,9 +91,9 @@ class _LiveChatState extends State<LiveChat> {
   }
 
   @override
-  void dispose() async {
-    await _session.close();
-    await _audioInput.stopRecording();
+  void dispose() {
+    _audioInput.stopRecording();
+    _session.close();
     _responseSubscription?.cancel();
     _responseSubscription = null;
     _isSessionConnected.dispose();
