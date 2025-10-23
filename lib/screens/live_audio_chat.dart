@@ -16,12 +16,14 @@ class LiveAudioChat extends StatefulWidget {
 
 class _LiveAudioChatState extends State<LiveAudioChat> {
   late final LiveSession _session;
-  StreamSubscription<LiveServerResponse>? _responseSubscription;
   final ValueNotifier<bool> _isSessionConnected = ValueNotifier(false);
   final ValueNotifier<bool> _isAudioReady = ValueNotifier(false);
 
   final AudioInput _audioInput = AudioInput();
   final AudioOutput _audioOutput = AudioOutput();
+
+  StreamSubscription<LiveServerResponse>? _responseSubscription;
+  StreamSubscription<Uint8List>? _audioSubscription;
 
   @override
   void initState() {
@@ -42,9 +44,9 @@ class _LiveAudioChatState extends State<LiveAudioChat> {
       // both ready, start sending audio stream
       final audioStream = await _audioInput.startRecording();
 
-      _session.sendMediaStream(
-        audioStream.map((bytes) => InlineDataPart('audio/pcm', bytes)),
-      );
+      _audioSubscription = audioStream.listen((bytes) {
+        _session.sendAudioRealtime(InlineDataPart('audio/pcm', bytes));
+      },);
     }
   }
 
@@ -52,7 +54,7 @@ class _LiveAudioChatState extends State<LiveAudioChat> {
     _session =
         await FirebaseAI.vertexAI()
             .liveGenerativeModel(
-              model: 'gemini-2.5-flash',
+              model: 'gemini-2.0-flash-exp',
               liveGenerationConfig: LiveGenerationConfig(
                 responseModalities: [ResponseModalities.audio],
               ),

@@ -2,7 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:vertexai_demo/firebase_options.dart';
 import 'package:vertexai_demo/screens/generative_chat.dart';
-import 'package:vertexai_demo/screens/live_chat.dart';
+import 'package:vertexai_demo/screens/live_audio_chat.dart';
+import 'package:vertexai_demo/screens/live_video_chat.dart';
 import 'package:vertexai_demo/screens/qr_code.dart';
 
 void main() async {
@@ -14,18 +15,14 @@ void main() async {
 
 enum Screens {
   generative,
-  live,
+  liveAudio,
+  // liveVideo,
   qrCode;
-
-  Widget get widget => switch (this) {
-    Screens.generative => GenerativeChat(),
-    Screens.live => LiveChat(),
-    Screens.qrCode => QrCode(),
-  };
 
   String get title => switch (this) {
     Screens.generative => "Generative model demo",
-    Screens.live => "Live multimodel demo",
+    Screens.liveAudio => "Live Audio multimodel demo",
+    // Screens.liveVideo => 'LiveAPI video chat demo',
     Screens.qrCode => 'Source code',
   };
 }
@@ -38,7 +35,9 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  final PageController _controller = PageController();
+  final ValueNotifier<Screens> _selectedScreen = ValueNotifier(
+    Screens.generative,
+  );
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -65,11 +64,8 @@ class _MainAppState extends State<MainApp> {
                                   ),
                                   child: ElevatedButton(
                                     onPressed: () {
-                                      _controller.animateToPage(
-                                        index,
-                                        duration: Duration(milliseconds: 300),
-                                        curve: Curves.easeIn,
-                                      );
+                                      _selectedScreen.value =
+                                          Screens.values[index];
                                       Navigator.of(context).pop();
                                     },
                                     child: Text(Screens.values[index].title),
@@ -85,18 +81,23 @@ class _MainAppState extends State<MainApp> {
           ),
         ],
       ),
-      body: PageView.builder(
-        controller: _controller,
-        itemBuilder: (context, index) => Screens.values[index].widget,
-        itemCount: Screens.values.length,
-        physics: NeverScrollableScrollPhysics(),
+      body: ValueListenableBuilder(
+        valueListenable: _selectedScreen,
+        builder: (context, value, child) {
+          return switch (value) {
+            Screens.generative => GenerativeChat(),
+            Screens.liveAudio => LiveAudioChat(),
+          // Screens.liveVideo => LiveVideoChat(),
+            Screens.qrCode => QrCode(),
+          };
+        },
       ),
     ),
   );
 
   @override
   void dispose() {
-    _controller.dispose();
+    _selectedScreen.dispose();
     super.dispose();
   }
 }
