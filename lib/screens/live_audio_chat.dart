@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:vertexai_demo/gen/assets.gen.dart';
 import 'package:vertexai_demo/utils/audio_input.dart';
 import 'package:vertexai_demo/utils/audio_output.dart';
@@ -25,6 +27,37 @@ class _LiveAudioChatState extends State<LiveAudioChat> {
   StreamSubscription<LiveServerResponse>? _responseSubscription;
   StreamSubscription<Uint8List>? _audioSubscription;
 
+  // add function declaration
+  static final String _functionBestDiaryApp = 'bestDiaryApp';
+  final FunctionDeclaration _bestDiaryAppDeclaration = FunctionDeclaration(
+    _functionBestDiaryApp,
+    'when user ask for suggestion of a digital diary app',
+    // no parameter is needed
+    parameters: {},
+  );
+
+  static final String _functionGetPrice = 'getPrice';
+  static final String _getPriceParamProductName = 'productName';
+  static final String _getPriceParamBudget = 'budget';
+  final FunctionDeclaration _getPriceDeclaration = FunctionDeclaration(
+    _functionGetPrice,
+    'when user ask for a price of any product',
+    parameters: {
+      _getPriceParamProductName: Schema.string(
+        description: 'the name of the product user is asking for',
+        title: 'product name',
+        nullable: false,
+      ),
+      _getPriceParamBudget: Schema.number(
+        description:
+            'the maximum amount user is willing to pay for this product.',
+        format: 'double',
+        title: 'budget',
+        nullable: true,
+      ),
+    },
+  );
+
   @override
   void initState() {
     super.initState();
@@ -46,18 +79,32 @@ class _LiveAudioChatState extends State<LiveAudioChat> {
 
       _audioSubscription = audioStream.listen((bytes) {
         _session.sendAudioRealtime(InlineDataPart('audio/pcm', bytes));
-      },);
+      });
     }
   }
 
   Future<void> _initSession() async {
     _session =
-        await FirebaseAI.vertexAI()
+        await FirebaseAI.googleAI()
             .liveGenerativeModel(
-              model: 'gemini-2.0-flash-exp',
+              model: 'gemini-2.5-flash-native-audio-preview-09-2025',
               liveGenerationConfig: LiveGenerationConfig(
                 responseModalities: [ResponseModalities.audio],
+                speechConfig: SpeechConfig(voiceName: 'KORE'),
               ),
+              systemInstruction: Content.system(
+                'You will always answer in vietnamese,'
+                ' unless user request a different language.',
+              ),
+              tools: [
+                Tool.functionDeclarations([
+                  _bestDiaryAppDeclaration,
+                  _getPriceDeclaration,
+                  // add more function declarations if needed
+                ]),
+                // enable google search feature
+                Tool.googleSearch(),
+              ],
             )
             .connect();
 
@@ -89,6 +136,35 @@ class _LiveAudioChatState extends State<LiveAudioChat> {
           }
         }
       }
+    } else if (message is LiveServerToolCall) {
+      final functionCalls = message.functionCalls ?? [];
+
+      final List<FunctionResponse> response = [];
+      for (FunctionCall call in functionCalls) {
+        if (call.name == _functionBestDiaryApp) {
+          response.add(_handleBestDiaryAppFunction(
+            functionName: call.name,
+            id: call.id
+          ));
+        }
+
+        if (call.name == _functionGetPrice) {
+          response.add(
+            _handleGetPriceFunction(
+              functionName: call.name,
+              id: call.id,
+              productName: call.args[_getPriceParamProductName] as String?,
+              budget: call.args[_getPriceParamBudget] as double?,
+            ),
+          );
+        }
+
+        // add more function handling if needed
+      }
+      // send response back to model
+      if (response.isNotEmpty) {
+        _session.sendToolResponse(response);
+      }
     }
   }
 
@@ -99,6 +175,7 @@ class _LiveAudioChatState extends State<LiveAudioChat> {
     _responseSubscription?.cancel();
     _responseSubscription = null;
     _isSessionConnected.dispose();
+    _audioSubscription?.cancel();
 
     super.dispose();
   }
@@ -160,5 +237,26 @@ class _LiveAudioChatState extends State<LiveAudioChat> {
         return Center(child: CircularProgressIndicator());
       },
     );
+  }
+
+  // no parameter is needed for this function
+  FunctionResponse _handleBestDiaryAppFunction({
+    required String functionName,
+    required String? id,
+  }) {
+    return FunctionResponse(functionName, {'response': 'MemoirME'}, id: id);
+  }
+
+  FunctionResponse _handleGetPriceFunction({
+    required String functionName,
+    required String? id,
+    required String? productName,
+    required double? budget,
+  }) {
+    // mock a dummy price for any product
+    final price = budget ?? 100;
+    return FunctionResponse(functionName, {
+      'response': {'productName': productName, 'price': price},
+    });
   }
 }
