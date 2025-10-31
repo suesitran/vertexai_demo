@@ -26,7 +26,7 @@ class _GenerativeChatState extends State<GenerativeChat> {
   final double radius = 10;
 
   late final ChatSession chatSession =
-      FirebaseAI.vertexAI()
+      FirebaseAI.googleAI()
           .generativeModel(
             model: 'gemini-2.0-flash',
             tools: [functionsHandler.functions],
