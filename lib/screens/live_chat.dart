@@ -127,7 +127,7 @@ class _LiveChatState extends State<LiveChat> {
                 speechConfig: SpeechConfig(voiceName: 'KORE'),
               ),
               systemInstruction: Content.system(
-                'You will always answer in vietnamese,'
+                'You will always answer in vietnamese, with Northern accent,'
                 ' unless user request a different language.',
               ),
               tools: [
@@ -162,9 +162,14 @@ class _LiveChatState extends State<LiveChat> {
   }
 
   void _handleSessionResponse(LiveServerResponse response) {
-    _isSessionConnected.value = SessionStatus.ready;
 
     final LiveServerMessage message = response.message;
+
+    if (_isSessionConnected.value != SessionStatus.ready) {
+      // simple trick to be informed when session is ready.
+      _session?.sendTextRealtime('hello!!');
+    }
+    _isSessionConnected.value = SessionStatus.ready;
 
     if (message is LiveServerContent) {
       final Content? content = message.modelTurn;
@@ -196,7 +201,7 @@ class _LiveChatState extends State<LiveChat> {
               functionName: call.name,
               id: call.id,
               productName: call.args[_getPriceParamProductName] as String?,
-              budget: call.args[_getPriceParamBudget] as double?,
+              budget: call.args[_getPriceParamBudget] as num?,
             ),
           );
         }
@@ -334,8 +339,9 @@ class _LiveChatState extends State<LiveChat> {
     required String functionName,
     required String? id,
     required String? productName,
-    required double? budget,
+    required num? budget,
   }) {
+    print('SUESI - get price $functionName $budget => $productName');
     // mock a dummy price for any product
     final price = budget ?? 100;
     return FunctionResponse(functionName, {
