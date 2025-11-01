@@ -33,7 +33,7 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   final ValueNotifier<Screens> _selectedScreen = ValueNotifier(
-    Screens.generative,
+    Screens.live,
   );
 
   @override
