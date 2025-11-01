@@ -9,6 +9,15 @@ import 'package:vertexai_demo/gen/assets.gen.dart';
 import 'package:vertexai_demo/utils/audio_input.dart';
 import 'package:vertexai_demo/utils/audio_output.dart';
 
+enum SessionStatus {
+  initialise,
+  connectingLiveSession,
+  settingUpAudioInput,
+  settingUpAudioOutput,
+  ready,
+  requestingMicrophonePermission,
+}
+
 class LiveChat extends StatefulWidget {
   const LiveChat({super.key});
 
@@ -17,9 +26,15 @@ class LiveChat extends StatefulWidget {
 }
 
 class _LiveChatState extends State<LiveChat> {
-  late final LiveSession _session;
-  final ValueNotifier<bool> _isSessionConnected = ValueNotifier(false);
+  LiveSession? _session;
+  final ValueNotifier<SessionStatus> _isSessionConnected = ValueNotifier(
+    SessionStatus.initialise,
+  );
   final ValueNotifier<bool> _isAudioReady = ValueNotifier(false);
+
+  final ValueNotifier<String> _modelSelection = ValueNotifier(
+    _modelNativeAudio,
+  );
 
   final AudioInput _audioInput = AudioInput();
   final AudioOutput _audioOutput = AudioOutput();
@@ -58,6 +73,10 @@ class _LiveChatState extends State<LiveChat> {
     },
   );
 
+  static final String _modelNativeAudio =
+      'gemini-2.5-flash-native-audio-preview-09-2025';
+  static final String _modelFlashLive = 'gemini-2.0-flash-live-001';
+
   @override
   void initState() {
     super.initState();
@@ -65,12 +84,22 @@ class _LiveChatState extends State<LiveChat> {
     _isSessionConnected.addListener(_startCommunication);
     _isAudioReady.addListener(_startCommunication);
 
-    _initSession();
-    _initAudio();
+    _modelSelection.addListener(() {
+      _initSession();
+    });
+
+    _initialise();
+  }
+
+  void _initialise() async {
+    final hasAudio = await _initAudio();
+    if (hasAudio) {
+      await _initSession();
+    }
   }
 
   void _startCommunication() async {
-    final bool sessionReady = _isSessionConnected.value;
+    final bool sessionReady = _isSessionConnected.value == SessionStatus.ready;
     final bool audioReady = _isAudioReady.value;
 
     if (sessionReady && audioReady) {
@@ -78,16 +107,18 @@ class _LiveChatState extends State<LiveChat> {
       final audioStream = await _audioInput.startRecording();
 
       _audioSubscription = audioStream.listen((bytes) {
-        _session.sendAudioRealtime(InlineDataPart('audio/pcm', bytes));
+        _session?.sendAudioRealtime(InlineDataPart('audio/pcm', bytes));
       });
     }
   }
 
   Future<void> _initSession() async {
+    _isSessionConnected.value = SessionStatus.connectingLiveSession;
+    final String modelName = _modelSelection.value;
     _session =
         await FirebaseAI.googleAI()
             .liveGenerativeModel(
-              model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+              model: modelName,
               liveGenerationConfig: LiveGenerationConfig(
                 responseModalities: [ResponseModalities.audio],
                 speechConfig: SpeechConfig(voiceName: 'KORE'),
@@ -108,18 +139,27 @@ class _LiveChatState extends State<LiveChat> {
             )
             .connect();
 
-    _responseSubscription = _session.receive().listen(_handleSessionResponse);
+    _responseSubscription = _session?.receive().listen(_handleSessionResponse);
   }
 
-  Future<void> _initAudio() async {
+  Future<bool> _initAudio() async {
+    _isSessionConnected.value = SessionStatus.settingUpAudioOutput;
     await _audioOutput.init();
-    _isAudioReady.value = await _audioInput.init();
+    _isSessionConnected.value = SessionStatus.settingUpAudioInput;
+    final hasPermission = await _audioInput.init();
 
-    await _audioOutput.playStream();
+    if (!hasPermission) {
+      _isSessionConnected.value = SessionStatus.requestingMicrophonePermission;
+    } else {
+      await _audioOutput.playStream();
+      _isAudioReady.value = true;
+    }
+
+    return hasPermission;
   }
 
   void _handleSessionResponse(LiveServerResponse response) {
-    _isSessionConnected.value = true;
+    _isSessionConnected.value = SessionStatus.ready;
 
     final LiveServerMessage message = response.message;
 
@@ -142,10 +182,9 @@ class _LiveChatState extends State<LiveChat> {
       final List<FunctionResponse> response = [];
       for (FunctionCall call in functionCalls) {
         if (call.name == _functionBestDiaryApp) {
-          response.add(_handleBestDiaryAppFunction(
-            functionName: call.name,
-            id: call.id
-          ));
+          response.add(
+            _handleBestDiaryAppFunction(functionName: call.name, id: call.id),
+          );
         }
 
         if (call.name == _functionGetPrice) {
@@ -163,7 +202,7 @@ class _LiveChatState extends State<LiveChat> {
       }
       // send response back to model
       if (response.isNotEmpty) {
-        _session.sendToolResponse(response);
+        _session?.sendToolResponse(response);
       }
     }
   }
@@ -171,7 +210,7 @@ class _LiveChatState extends State<LiveChat> {
   @override
   void dispose() {
     _audioInput.stopRecording();
-    _session.close();
+    _session?.close();
     _responseSubscription?.cancel();
     _responseSubscription = null;
     _isSessionConnected.dispose();
@@ -184,8 +223,8 @@ class _LiveChatState extends State<LiveChat> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
       valueListenable: _isSessionConnected,
-      builder: (context, connected, child) {
-        if (connected) {
+      builder: (context, status, child) {
+        if (status == SessionStatus.ready) {
           // show a UI indicate that session is connected
           return Container(
             padding: EdgeInsets.all(20.0),
@@ -194,7 +233,40 @@ class _LiveChatState extends State<LiveChat> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text('Session connected'),
+                ValueListenableBuilder<String>(
+                  valueListenable: _modelSelection,
+                  builder:
+                      (context, value, child) => Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Text(
+                            '2.0 Flash Live',
+                            style: TextStyle(
+                              color:
+                                  value == _modelFlashLive
+                                      ? Colors.black
+                                      : Colors.black12,
+                            ),
+                          ),
+                          Switch(
+                            value: value == _modelNativeAudio,
+                            onChanged: (value) {
+                              _modelSelection.value =
+                                  value ? _modelNativeAudio : _modelFlashLive;
+                            },
+                          ),
+                          Text(
+                            '2.5 Flash native audio',
+                            style: TextStyle(
+                              color:
+                                  value == _modelNativeAudio
+                                      ? Colors.black
+                                      : Colors.black12,
+                            ),
+                          ),
+                        ],
+                      ),
+                ),
                 ValueListenableBuilder(
                   valueListenable: _isAudioReady,
                   builder:
@@ -234,7 +306,12 @@ class _LiveChatState extends State<LiveChat> {
           );
         }
 
-        return Center(child: CircularProgressIndicator());
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [CircularProgressIndicator(), Text(status.name)],
+          ),
+        );
       },
     );
   }
