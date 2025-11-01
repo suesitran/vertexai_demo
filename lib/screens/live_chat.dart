@@ -9,14 +9,14 @@ import 'package:vertexai_demo/gen/assets.gen.dart';
 import 'package:vertexai_demo/utils/audio_input.dart';
 import 'package:vertexai_demo/utils/audio_output.dart';
 
-class LiveAudioChat extends StatefulWidget {
-  const LiveAudioChat({super.key});
+class LiveChat extends StatefulWidget {
+  const LiveChat({super.key});
 
   @override
-  State<LiveAudioChat> createState() => _LiveAudioChatState();
+  State<LiveChat> createState() => _LiveChatState();
 }
 
-class _LiveAudioChatState extends State<LiveAudioChat> {
+class _LiveChatState extends State<LiveChat> {
   late final LiveSession _session;
   final ValueNotifier<bool> _isSessionConnected = ValueNotifier(false);
   final ValueNotifier<bool> _isAudioReady = ValueNotifier(false);

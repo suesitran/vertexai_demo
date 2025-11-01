@@ -2,8 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:vertexai_demo/firebase_options.dart';
 import 'package:vertexai_demo/screens/generative_chat.dart';
-import 'package:vertexai_demo/screens/live_audio_chat.dart';
-import 'package:vertexai_demo/screens/live_video_chat.dart';
+import 'package:vertexai_demo/screens/live_chat.dart';
 import 'package:vertexai_demo/screens/qr_code.dart';
 
 void main() async {
@@ -15,14 +14,12 @@ void main() async {
 
 enum Screens {
   generative,
-  liveAudio,
-  // liveVideo,
+  live,
   qrCode;
 
   String get title => switch (this) {
     Screens.generative => "Generative model demo",
-    Screens.liveAudio => "Live Audio multimodel demo",
-    // Screens.liveVideo => 'LiveAPI video chat demo',
+    Screens.live => "Gemini LiveAPI demo",
     Screens.qrCode => 'Source code',
   };
 }
@@ -43,7 +40,7 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) => MaterialApp(
     home: Scaffold(
       appBar: AppBar(
-        title: Text('Vertex AI in Firebase Demo'),
+        title: Text('Firebase AI Logic Demo'),
         actions: [
           Builder(
             builder: (context) {
@@ -86,8 +83,7 @@ class _MainAppState extends State<MainApp> {
         builder: (context, value, child) {
           return switch (value) {
             Screens.generative => GenerativeChat(),
-            Screens.liveAudio => LiveAudioChat(),
-          // Screens.liveVideo => LiveVideoChat(),
+            Screens.live => LiveChat(),
             Screens.qrCode => QrCode(),
           };
         },
