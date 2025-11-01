@@ -113,8 +113,11 @@ class _LiveChatState extends State<LiveChat> {
   }
 
   Future<void> _initSession() async {
+    await _session?.close();
+    _session = null;
     _isSessionConnected.value = SessionStatus.connectingLiveSession;
     final String modelName = _modelSelection.value;
+
     _session =
         await FirebaseAI.googleAI()
             .liveGenerativeModel(
@@ -233,39 +236,42 @@ class _LiveChatState extends State<LiveChat> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                ValueListenableBuilder<String>(
-                  valueListenable: _modelSelection,
-                  builder:
-                      (context, value, child) => Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Text(
-                            '2.0 Flash Live',
-                            style: TextStyle(
-                              color:
-                                  value == _modelFlashLive
-                                      ? Colors.black
-                                      : Colors.black12,
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: _modelSelection,
+                    builder:
+                        (context, value, child) => Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Text(
+                              '2.0 Flash Live',
+                              style: TextStyle(
+                                color:
+                                    value == _modelFlashLive
+                                        ? Colors.black
+                                        : Colors.black12,
+                              ),
                             ),
-                          ),
-                          Switch(
-                            value: value == _modelNativeAudio,
-                            onChanged: (value) {
-                              _modelSelection.value =
-                                  value ? _modelNativeAudio : _modelFlashLive;
-                            },
-                          ),
-                          Text(
-                            '2.5 Flash native audio',
-                            style: TextStyle(
-                              color:
-                                  value == _modelNativeAudio
-                                      ? Colors.black
-                                      : Colors.black12,
+                            Switch(
+                              value: value == _modelNativeAudio,
+                              onChanged: (value) {
+                                _modelSelection.value =
+                                    value ? _modelNativeAudio : _modelFlashLive;
+                              },
                             ),
-                          ),
-                        ],
-                      ),
+                            Text(
+                              '2.5 Flash native audio',
+                              style: TextStyle(
+                                color:
+                                    value == _modelNativeAudio
+                                        ? Colors.black
+                                        : Colors.black12,
+                              ),
+                            ),
+                          ],
+                        ),
+                  ),
                 ),
                 ValueListenableBuilder(
                   valueListenable: _isAudioReady,
