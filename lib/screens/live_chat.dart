@@ -107,7 +107,14 @@ class _LiveChatState extends State<LiveChat> {
       final audioStream = await _audioInput.startRecording();
 
       _audioSubscription = audioStream.listen((bytes) {
-        _session?.sendAudioRealtime(InlineDataPart('audio/pcm', bytes));
+        try {
+          _session?.sendAudioRealtime(InlineDataPart('audio/pcm', bytes));
+        } catch (e) {
+          _audioSubscription?.cancel();
+          _audioSubscription = null;
+          // reinit session
+          _initSession();
+        }
       });
     }
   }
