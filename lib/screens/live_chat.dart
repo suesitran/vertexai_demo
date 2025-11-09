@@ -10,6 +10,7 @@ import 'package:vertexai_demo/utils/audio_input.dart';
 import 'package:vertexai_demo/utils/audio_output.dart';
 
 enum SessionStatus {
+  idle,
   initialise,
   connectingLiveSession,
   settingUpAudioInput,
@@ -28,7 +29,7 @@ class LiveChat extends StatefulWidget {
 class _LiveChatState extends State<LiveChat> {
   LiveSession? _session;
   final ValueNotifier<SessionStatus> _isSessionConnected = ValueNotifier(
-    SessionStatus.initialise,
+    SessionStatus.idle,
   );
   final ValueNotifier<bool> _isAudioReady = ValueNotifier(false);
 
@@ -87,8 +88,6 @@ class _LiveChatState extends State<LiveChat> {
     _modelSelection.addListener(() {
       _initSession();
     });
-
-    _initialise();
   }
 
   void _initialise() async {
@@ -169,7 +168,6 @@ class _LiveChatState extends State<LiveChat> {
   }
 
   void _handleSessionResponse(LiveServerResponse response) {
-
     final LiveServerMessage message = response.message;
 
     if (_isSessionConnected.value != SessionStatus.ready) {
@@ -324,6 +322,14 @@ class _LiveChatState extends State<LiveChat> {
           );
         }
 
+        if (status == SessionStatus.idle) {
+          return Center(
+            child: ElevatedButton(
+              onPressed: () => _initialise(),
+              child: Text('Start Live Chat'),
+            ),
+          );
+        }
         return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
