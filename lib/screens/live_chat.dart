@@ -33,8 +33,11 @@ class _LiveChatState extends State<LiveChat> {
   );
   final ValueNotifier<bool> _isAudioReady = ValueNotifier(false);
 
-  final ValueNotifier<String> _modelSelection = ValueNotifier(
-    _modelNativeAudio,
+  final ModelFlashLive _modelFlashLive = ModelFlashLive();
+  final ModelFlashLivePreview _modelFlashLivePreview = ModelFlashLivePreview();
+  final ModelFlashNativeAudio _modelFlashNativeAudio = ModelFlashNativeAudio();
+  late final ValueNotifier<ModelDefinition> _modelSelection = ValueNotifier(
+    _modelFlashLivePreview,
   );
 
   final AudioInput _audioInput = AudioInput();
@@ -73,10 +76,6 @@ class _LiveChatState extends State<LiveChat> {
       ),
     },
   );
-
-  static final String _modelNativeAudio =
-      'gemini-2.5-flash-native-audio-preview-09-2025';
-  static final String _modelFlashLive = 'gemini-2.0-flash-live-001';
 
   @override
   void initState() {
@@ -122,31 +121,17 @@ class _LiveChatState extends State<LiveChat> {
     await _session?.close();
     _session = null;
     _isSessionConnected.value = SessionStatus.connectingLiveSession;
-    final String modelName = _modelSelection.value;
+    final ModelDefinition model = _modelSelection.value;
 
-    _session =
-        await FirebaseAI.googleAI()
-            .liveGenerativeModel(
-              model: modelName,
-              liveGenerationConfig: LiveGenerationConfig(
-                responseModalities: [ResponseModalities.audio],
-                speechConfig: SpeechConfig(voiceName: 'KORE'),
-              ),
-              systemInstruction: Content.system(
-                'You will always answer in vietnamese, with Northern accent,'
-                ' unless user request a different language.',
-              ),
-              tools: [
-                Tool.functionDeclarations([
-                  _bestDiaryAppDeclaration,
-                  _getPriceDeclaration,
-                  // add more function declarations if needed
-                ]),
-                // enable google search feature
-                Tool.googleSearch(),
-              ],
-            )
-            .connect();
+    _session = await model.createSession([
+      Tool.functionDeclarations([
+        _bestDiaryAppDeclaration,
+        _getPriceDeclaration,
+        // add more function declarations if needed
+      ]),
+      // enable google search feature
+      Tool.googleSearch(),
+    ]);
 
     _responseSubscription = _session?.receive().listen(_handleSessionResponse);
   }
@@ -234,109 +219,120 @@ class _LiveChatState extends State<LiveChat> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: _isSessionConnected,
-      builder: (context, status, child) {
-        if (status == SessionStatus.ready) {
-          // show a UI indicate that session is connected
-          return Container(
-            padding: EdgeInsets.all(20.0),
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: ValueListenableBuilder<String>(
-                    valueListenable: _modelSelection,
-                    builder:
-                        (context, value, child) => Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Text(
-                              '2.0 Flash Live',
-                              style: TextStyle(
-                                color:
-                                    value == _modelFlashLive
-                                        ? Colors.black
-                                        : Colors.black12,
-                              ),
-                            ),
-                            Switch(
-                              value: value == _modelNativeAudio,
-                              onChanged: (value) {
-                                _modelSelection.value =
-                                    value ? _modelNativeAudio : _modelFlashLive;
-                              },
-                            ),
-                            Text(
-                              '2.5 Flash native audio',
-                              style: TextStyle(
-                                color:
-                                    value == _modelNativeAudio
-                                        ? Colors.black
-                                        : Colors.black12,
-                              ),
-                            ),
-                          ],
-                        ),
+    return Container(
+      padding: EdgeInsets.all(20.0),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: ValueListenableBuilder<ModelDefinition>(
+              valueListenable: _modelSelection,
+              builder:
+                  (context, value, child) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DropdownMenu<ModelDefinition>(
+                        initialSelection: value,
+                        onSelected: (value) {
+                          if (value != null) {
+                            _modelSelection.value = value;
+                          }
+                        },
+                        dropdownMenuEntries: [
+                          DropdownMenuEntry(
+                            value: _modelFlashLive,
+                            label: _modelFlashLive.modelName,
+                          ),
+                          DropdownMenuEntry(
+                            value: _modelFlashNativeAudio,
+                            label: _modelFlashNativeAudio.modelName,
+                          ),
+                          DropdownMenuEntry(
+                            value: _modelFlashLivePreview,
+                            label: _modelFlashLivePreview.modelName,
+                          ),
+                        ],
+                      ),
+                      Text(value.notes),
+                    ],
                   ),
-                ),
-                ValueListenableBuilder(
-                  valueListenable: _isAudioReady,
-                  builder:
-                      (context, value, child) =>
-                          Text('Audio ${value ? 'ready' : 'not ready'}'),
-                ),
-                Text(
-                  'Source code available at \nhttps://github.com/suesitran/vertexai_demo',
-                  textAlign: TextAlign.center,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20.0),
-                  child: Assets.vertexAiDemo.image(),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _audioInput.isPaused.then((pause) {
-                      if (pause) {
-                        _audioInput.resume();
-                      } else {
-                        _audioInput.pause();
-                      }
-                    });
-                  },
-                  child: ValueListenableBuilder<RecordingState>(
-                    valueListenable: _audioInput.state,
-                    builder: (context, state, child) {
-                      final bool recording = state == RecordingState.recording;
-                      String label = recording ? 'Pause audio' : 'Resume audio';
-
-                      return Text(label);
-                    },
-                  ),
-                ),
-              ],
             ),
-          );
-        }
-
-        if (status == SessionStatus.idle) {
-          return Center(
-            child: ElevatedButton(
-              onPressed: () => _initialise(),
-              child: Text('Start Live Chat'),
-            ),
-          );
-        }
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [CircularProgressIndicator(), Text(status.name)],
           ),
-        );
-      },
+          Text(
+            'Source code available at \nhttps://github.com/suesitran/vertexai_demo',
+            textAlign: TextAlign.center,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0),
+            child: Assets.vertexAiDemo.image(),
+          ),
+          ValueListenableBuilder<SessionStatus>(
+            valueListenable: _isSessionConnected,
+            builder: (context, status, child) {
+              if (status == SessionStatus.ready) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ValueListenableBuilder(
+                      valueListenable: _isAudioReady,
+                      builder:
+                          (context, value, child) =>
+                              Text('Audio ${value ? 'ready' : 'not ready'}'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _audioInput.isPaused.then((pause) {
+                          if (pause) {
+                            _audioInput.resume();
+                          } else {
+                            _audioInput.pause();
+                          }
+                        });
+                      },
+                      child: ValueListenableBuilder<RecordingState>(
+                        valueListenable: _audioInput.state,
+                        builder: (context, state, child) {
+                          final bool recording =
+                              state == RecordingState.recording;
+                          String label =
+                              recording ? 'Pause audio' : 'Resume audio';
+
+                          return Text(label);
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: status == SessionStatus.idle ? () => _initialise() : null,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (status != SessionStatus.idle)
+                            Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          Text('Start new session')
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -354,11 +350,88 @@ class _LiveChatState extends State<LiveChat> {
     required String? productName,
     required num? budget,
   }) {
-    print('SUESI - get price $functionName $budget => $productName');
     // mock a dummy price for any product
     final price = budget ?? 100;
     return FunctionResponse(functionName, {
       'response': {'productName': productName, 'price': price},
     });
   }
+}
+
+abstract class ModelDefinition {
+  final String modelName;
+
+  ModelDefinition._(this.modelName);
+
+  // to be override by sub-class to return either GoogleAI or VertexAI
+  FirebaseAI get firebaseAi;
+  // to be override by sub-class to setup function declarations if needed
+  List<FunctionDeclaration> get functionDeclarations => [];
+  // to be override by sub-class to enable or disable google search
+  bool get enableGoogleSearch => false;
+  String get notes;
+
+  Future<LiveSession> createSession(List<Tool>? tools) =>
+      firebaseAi
+          .liveGenerativeModel(
+            model: modelName,
+            liveGenerationConfig: LiveGenerationConfig(
+              responseModalities: [ResponseModalities.audio],
+              speechConfig: SpeechConfig(voiceName: 'KORE'),
+            ),
+            systemInstruction: Content.system(
+              'You are a friendly confidant who is cheerful and understanding. Never response with emoji',
+            ),
+            tools: tools,
+          )
+          .connect();
+}
+
+/// -----
+/// Model notes
+/// gemini-2.0-flash-live-preview-04-09
+/// - use with vertexAI only
+/// - low latency
+/// - voice: not good at vietnamese
+class ModelFlashLivePreview extends ModelDefinition {
+  ModelFlashLivePreview() : super._('gemini-2.0-flash-live-preview-04-09');
+
+  @override
+  FirebaseAI get firebaseAi => FirebaseAI.vertexAI();
+
+  @override
+  String get notes => 'low latency, but not good at vietnamese';
+}
+
+/// -----
+/// Model notes
+/// gemini-2.5-flash-native-audio-preview-09-2025
+/// - use with googleAI only
+/// - high latency
+/// - voice: very good at vietnamese
+class ModelFlashNativeAudio extends ModelDefinition {
+  ModelFlashNativeAudio()
+    : super._('gemini-2.5-flash-native-audio-preview-09-2025');
+
+  @override
+  FirebaseAI get firebaseAi => FirebaseAI.googleAI();
+
+  @override
+  String get notes => 'high latency, but very good at vietnamese';
+}
+
+/// -----
+/// Model notes
+/// gemini-2.0-flash-live-001
+/// - use with googleAI only
+/// - high latency
+/// - voice: not good at vietnamese
+class ModelFlashLive extends ModelDefinition {
+  ModelFlashLive() : super._('gemini-2.0-flash-live-001');
+
+  @override
+  FirebaseAI get firebaseAi => FirebaseAI.googleAI();
+
+  @override
+  String get notes => 'high latency, and not good at vietnamese';
 }
